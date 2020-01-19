@@ -78,7 +78,13 @@ static int subs__send(struct mosquitto_db *db, struct mosquitto__subleaf *leaf, 
 	if(rc2 == MOSQ_ERR_ACL_DENIED){
 		return MOSQ_ERR_SUCCESS;
 	}else if(rc2 == MOSQ_ERR_SUCCESS){
-		client_qos = leaf->qos;
+		
+                /* Check for packet inspect firewall decision */
+                rc2 = mosquitto_pkt_inspect(db, leaf->context, qos, topic, leaf->context->id, leaf->context->username, stored);
+                if (rc2 == MOSQ_ERR_PKT_DROP)
+                    return MOSQ_ERR_SUCCESS;
+
+                client_qos = leaf->qos;
 
 		if(db->config->upgrade_outgoing_qos){
 			msg_qos = client_qos;
@@ -102,7 +108,8 @@ static int subs__send(struct mosquitto_db *db, struct mosquitto__subleaf *leaf, 
 		if(leaf->identifier){
 			mosquitto_property_add_varint(&properties, MQTT_PROP_SUBSCRIPTION_IDENTIFIER, leaf->identifier);
 		}
-		if(db__message_insert(db, leaf->context, mid, mosq_md_out, msg_qos, client_retain, stored, properties) == 1){
+		
+                if(db__message_insert(db, leaf->context, mid, mosq_md_out, msg_qos, client_retain, stored, properties) == 1){
 			return 1;
 		}
 	}else{

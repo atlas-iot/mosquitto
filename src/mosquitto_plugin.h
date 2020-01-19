@@ -310,6 +310,7 @@ int mosquitto_auth_start(void *user_data, struct mosquitto *client, const char *
 
 int mosquitto_auth_continue(void *user_data, struct mosquitto *client, const char *method, const void *data_in, uint16_t data_in_len, void **data_out, uint16_t *data_out_len);
 
+int mosquitto_auth_pkt_inspect(void *user_data, const char *src_client_id, const char *src_username, const char *dst_client_id, const char *dst_username, const char *topic, uint8_t qos, uint16_t payload_len, const uint8_t *payload);
 
 #ifdef __cplusplus
 }

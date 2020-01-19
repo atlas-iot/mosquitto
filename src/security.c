@@ -100,7 +100,7 @@ int security__load_v2(struct mosquitto__auth_plugin *plugin, struct mosquitto_au
 		LIB_CLOSE(lib);
 		return 1;
 	}
-
+	
 	plugin->lib = lib;
 	plugin->user_data = NULL;
 
@@ -174,7 +174,7 @@ int security__load_v3(struct mosquitto__auth_plugin *plugin, struct mosquitto_op
 		LIB_CLOSE(lib);
 		return 1;
 	}
-
+        
 	plugin->lib = lib;
 	plugin->user_data = NULL;
 	if(plugin->plugin_init_v3){
@@ -248,6 +248,15 @@ int security__load_v4(struct mosquitto__auth_plugin *plugin, struct mosquitto_op
 	}else{
 		log__printf(NULL, MOSQ_LOG_INFO,
 				" ├── TLS-PSK checking not enabled.");
+	}
+
+	plugin->pkt_inspect_v4 = (FUNC_auth_plugin_pkt_inspect_v4)LIB_SYM(lib, "mosquitto_auth_pkt_inspect");
+	if(plugin->pkt_inspect_v4){
+		log__printf(NULL, MOSQ_LOG_INFO,
+				" ├── Packet inspect enabled");
+	}else{
+		log__printf(NULL, MOSQ_LOG_INFO,
+				" ├── Packet inspect not enabled.");
 	}
 
 	plugin->auth_start_v4 = (FUNC_auth_plugin_auth_start_v4)LIB_SYM(lib, "mosquitto_auth_start");
@@ -673,6 +682,38 @@ int mosquitto_acl_check(struct mosquitto_db *db, struct mosquitto *context, cons
 	return rc;
 }
 
+int mosquitto_pkt_inspect(struct mosquitto_db *db, struct mosquitto *context, int qos, const char *topic,
+                          const char *dst_client_id, const char *dst_username,
+                          struct mosquitto_msg_store *msg_stored)
+{
+        int rc;
+        int i;
+        struct mosquitto__security_options *opts;
+
+	if(db->config->per_listener_settings){
+		opts = &context->listener->security_options;
+	}else{
+		opts = &db->config->security_options;
+	}
+
+	for(i=0; i<opts->auth_plugin_config_count; i++){
+		if(opts->auth_plugin_configs[i].plugin.version == 4 
+				&& opts->auth_plugin_configs[i].plugin.pkt_inspect_v4){
+                    
+                    rc = opts->auth_plugin_configs[i].plugin.pkt_inspect_v4(opts->auth_plugin_configs[i].plugin.user_data,
+                                                                            msg_stored->source_id, msg_stored->source_username,
+                                                                            dst_client_id, dst_username, topic, qos,
+                                                                            msg_stored->payloadlen,
+                                                                            UHPA_ACCESS(msg_stored->payload, msg_stored->payloadlen));
+                    if (rc != MOSQ_ERR_SUCCESS)
+                        return rc; 
+                }
+        }
+
+        /* Return SUCESS, if no packet inspection plug-in is found */
+        return MOSQ_ERR_SUCCESS;
+}
+ 
 int mosquitto_unpwd_check(struct mosquitto_db *db, struct mosquitto *context, const char *username, const char *password)
 {
 	int rc;

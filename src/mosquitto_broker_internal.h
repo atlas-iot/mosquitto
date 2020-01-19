@@ -143,6 +143,7 @@ typedef int (*FUNC_auth_plugin_unpwd_check_v4)(void *, struct mosquitto *, const
 typedef int (*FUNC_auth_plugin_psk_key_get_v4)(void *, struct mosquitto *, const char *, const char *, char *, int);
 typedef int (*FUNC_auth_plugin_auth_start_v4)(void *, struct mosquitto *, const char *, bool, const void *, uint16_t, void **, uint16_t *);
 typedef int (*FUNC_auth_plugin_auth_continue_v4)(void *, struct mosquitto *, const char *, const void *, uint16_t, void **, uint16_t *);
+typedef int (*FUNC_auth_plugin_pkt_inspect_v4)(void *, const char *, const char *, const char *, const char *, const char *, uint8_t, uint16_t, const uint8_t*);
 
 typedef int (*FUNC_auth_plugin_init_v3)(void **, struct mosquitto_opt *, int);
 typedef int (*FUNC_auth_plugin_cleanup_v3)(void *, struct mosquitto_opt *, int);
@@ -159,7 +160,6 @@ typedef int (*FUNC_auth_plugin_security_cleanup_v2)(void *, struct mosquitto_aut
 typedef int (*FUNC_auth_plugin_acl_check_v2)(void *, const char *, const char *, const char *, int);
 typedef int (*FUNC_auth_plugin_unpwd_check_v2)(void *, const char *, const char *);
 typedef int (*FUNC_auth_plugin_psk_key_get_v2)(void *, const char *, const char *, char *, int);
-
 
 enum mosquitto_msg_origin{
 	mosq_mo_client = 0,
@@ -180,8 +180,9 @@ struct mosquitto__auth_plugin{
 	FUNC_auth_plugin_psk_key_get_v4 psk_key_get_v4;
 	FUNC_auth_plugin_auth_start_v4 auth_start_v4;
 	FUNC_auth_plugin_auth_continue_v4 auth_continue_v4;
-
-	FUNC_auth_plugin_init_v3 plugin_init_v3;
+        FUNC_auth_plugin_pkt_inspect_v4 pkt_inspect_v4;
+	
+        FUNC_auth_plugin_init_v3 plugin_init_v3;
 	FUNC_auth_plugin_cleanup_v3 plugin_cleanup_v3;
 	FUNC_auth_plugin_security_init_v3 security_init_v3;
 	FUNC_auth_plugin_security_cleanup_v3 security_cleanup_v3;
@@ -696,6 +697,7 @@ int mosquitto_security_cleanup(struct mosquitto_db *db, bool reload);
 int mosquitto_acl_check(struct mosquitto_db *db, struct mosquitto *context, const char *topic, long payloadlen, void* payload, int qos, bool retain, int access);
 int mosquitto_unpwd_check(struct mosquitto_db *db, struct mosquitto *context, const char *username, const char *password);
 int mosquitto_psk_key_get(struct mosquitto_db *db, struct mosquitto *context, const char *hint, const char *identity, char *key, int max_key_len);
+int mosquitto_pkt_inspect(struct mosquitto_db *db, struct mosquitto *context, int qos, const char *topic, const char *dst_client_id, const char *dst_username, struct mosquitto_msg_store *msg_stored);
 
 int mosquitto_security_init_default(struct mosquitto_db *db, bool reload);
 int mosquitto_security_apply_default(struct mosquitto_db *db);
